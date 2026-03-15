@@ -1,0 +1,15 @@
+# data file — gitignored to prevent confession data leaking
+
+# node modules
+node_modules/
+
+# environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*

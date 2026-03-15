@@ -1,0 +1,12 @@
+{
+  "name": "kitty-confessions",
+  "version": "1.0.0",
+  "description": "an anonymous post/read site",
+  "license": "ISC",
+  "author": "Shashank",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

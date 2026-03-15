@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello Kitty & Kuromi Confessions</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Home Section -->
+    <section id="home" class="section active">
+        <div class="home-container">
+            <div class="logo-area">
+                <div class="hello-kitty-bow"></div>
+                <h1 class="main-title">Hello Kitty & Kuromi</h1>
+                <h2 class="subtitle">Secret Confessions</h2>
+            </div>
+            
+            <div class="navigation-cards">
+                <div class="nav-card hello-kitty-card" data-section="confess">
+                    <div class="card-icon hello-kitty-icon"></div>
+                    <h3>Share Your Heart</h3>
+                    <p>Write an anonymous confession</p>
+                    <div class="card-decoration bow-left"></div>
+                    <div class="card-decoration bow-right"></div>
+                </div>
+                
+                <div class="nav-card kuromi-card" data-section="view">
+                    <div class="card-icon kuromi-icon"></div>
+                    <h3>Read Confessions</h3>
+                    <p>See what others shared</p>
+                    <div class="card-decoration skull-left"></div>
+                    <div class="card-decoration skull-right"></div>
+                </div>
+            </div>
+            
+            <div class="floating-hearts">
+                <span class="heart">♡</span>
+                <span class="heart">♡</span>
+                <span class="heart">♡</span>
+                <span class="heart">♡</span>
+                <span class="heart">♡</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Confession Input Section -->
+    <section id="confess" class="section">
+        <div class="section-container">
+            <button class="back-btn" data-target="home">← Back to Home</button>
+            
+            <div class="content-wrapper">
+                <div class="section-header">
+                    <div class="header-decoration hello-kitty-face"></div>
+                    <h2 class="section-title">Share Your Confession</h2>
+                    <p class="section-description">Your secret is safe with us ♡</p>
+                </div>
+                
+                <div class="confession-form-wrapper">
+                    <form id="confessionForm" class="confession-form">
+                        <div class="form-group">
+                            <label for="confessionText">Your Confession</label>
+                            <textarea 
+                                id="confessionText" 
+                                name="confession" 
+                                rows="8" 
+                                placeholder="Spill your tea here..."
+                                required
+                            ></textarea>
+                            <div class="char-counter">
+                                <span id="charCount">0</span> / 700 characters
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Choose Your Vibe</label>
+                            <div class="vibe-options">
+                                <label class="vibe-option">
+                                    <input type="radio" name="vibe" value="sweet" checked>
+                                    <span class="vibe-label hello-kitty-vibe">
+                                        <span class="vibe-icon">🎀</span>
+                                        Sweet
+                                    </span>
+                                </label>
+                                <label class="vibe-option">
+                                    <input type="radio" name="vibe" value="edgy">
+                                    <span class="vibe-label kuromi-vibe">
+                                        <span class="vibe-icon">💀</span>
+                                        Edgy
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            <span class="btn-text">Submit Confession</span>
+                            <span class="btn-icon">→</span>
+                        </button>
+                    </form>
+                    
+                    <div id="successMessage" class="success-message">
+                        <div class="success-icon">✓</div>
+                        <h3>Confession Submitted!</h3>
+                        <p>Your confession ID: <span id="confessionId" class="confession-id"></span></p>
+                        <button class="secondary-btn" data-target="view">View All Confessions</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Confession Display Section -->
+    <section id="view" class="section">
+        <div class="section-container">
+            <button class="back-btn" data-target="home">← Back to Home</button>
+            
+            <div class="content-wrapper">
+                <div class="section-header">
+                    <div class="header-decoration kuromi-face"></div>
+                    <h2 class="section-title">All Confessions</h2>
+                    <p class="section-description">Read Anonymous Hearts ♡</p>
+                </div>
+                
+                <div class="filter-bar">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="sweet">Sweet 🎀</button>
+                    <button class="filter-btn" data-filter="edgy">Edgy 💀</button>
+                </div>
+                
+                <div id="confessionsContainer" class="confessions-grid">
+                    <!-- Sample confession cards - will be populated by JS -->
+                    <div class="confession-card sweet" data-id="sample-001">
+                        <div class="confession-header">
+                            <span class="confession-badge sweet-badge">🎀 Sweet</span>
+                            <span class="confession-id-display">#sample-001</span>
+                        </div>
+
+                        <div class="confession-content">
+                            <p>Your Confession text...</p>
+                        </div>
+
+                        <div class="confession-footer">
+                            <span class="confession-time">Just now</span>
+
+                            <div class="confession-actions">
+                                <button class="edit-btn">Edit ✏️</button>
+                                <button class="delete-btn">Delete 🗑</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="confession-card edgy" data-id="sample-002">
+                        <div class="confession-header">
+                            <span class="confession-badge edgy-badge">💀 Edgy</span>
+                            <span class="confession-id-display">#sample-002</span>
+                        </div>
+                        <div class="confession-content">
+                            <p>I pretend to like popular music but actually listen to the most obscure soundtracks nobody has ever heard of. My playlists are chaos. 🎵💀</p>
+                        </div>
+                        <div class="confession-footer">
+                            <span class="confession-time">2 minutes ago</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="emptyState" class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <h3>No Confessions Yet</h3>
+                    <p>Be the first to share your secret!</p>
+                    <button class="secondary-btn" data-target="confess">Write Confession</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="index.js"></script>
+</body>
+</html>
