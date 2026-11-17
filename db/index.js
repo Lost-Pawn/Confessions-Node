@@ -1,12 +1,17 @@
 import pg from 'pg'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const { Pool } = pg
 
+const __dirname = import.meta.dirname || path.dirname(fileURLToPath(import.meta.url))
 const isProduction = process.env.NODE_ENV === 'production'
 const databaseUrl = process.env.DATABASE_URL
+
+// Automatically enable SSL for cloud databases in production unless explicitly disabled with DB_SSL=false
 const useSsl = process.env.DB_SSL === 'true' || 
+    (isProduction && process.env.DB_SSL !== 'false' && databaseUrl && !databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')) ||
     (databaseUrl && (databaseUrl.includes('render.com') || databaseUrl.includes('sslmode=require')))
 
 const poolConfig = {
@@ -45,14 +50,27 @@ export async function query(text, params) {
     return res
 }
 
-// Automatically create tables & indexes if they don't exist
-export async function initDB() {
-    try {
-        console.log('Connecting to PostgreSQL database...')
-        // Test connection
-        await pool.query('SELECT 1')
-        console.log('PostgreSQL connected successfully.')
+// Automatically create tables & indexes with retry loop for cloud deployment readiness
+export async function initDB(retries = 5, delayMs = 2000) {
+    let connected = false
 
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            console.log(`Connecting to PostgreSQL database (attempt ${attempt}/${retries})...`)
+            await pool.query('SELECT 1')
+            connected = true
+            console.log('PostgreSQL connected successfully.')
+            break
+        } catch (err) {
+            console.warn(`Database connection attempt ${attempt} failed: ${err.message}`)
+            if (attempt === retries) {
+                throw new Error(`Failed to connect to PostgreSQL after ${retries} attempts: ${err.message}`)
+            }
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+        }
+    }
+
+    try {
         // Create confessions table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS confessions (
@@ -102,7 +120,7 @@ async function seedFromDataJson() {
             return
         }
 
-        const dataJsonPath = path.join(import.meta.dirname, '..', 'data', 'data.json')
+        const dataJsonPath = path.join(__dirname, '..', 'data', 'data.json')
         const raw = await fs.readFile(dataJsonPath, 'utf8')
         const confessions = JSON.parse(raw)
 

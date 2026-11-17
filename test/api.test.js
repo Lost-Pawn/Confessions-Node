@@ -12,8 +12,9 @@ import {
 } from '../handlers/routeHandlers.js'
 import { serveStatic } from '../utils/serveStatic.js'
 import { sendResponse } from '../utils/sendResponse.js'
+import { fileURLToPath } from 'node:url'
 
-const __dirname = import.meta.dirname
+const __dirname = import.meta.dirname || path.dirname(fileURLToPath(import.meta.url))
 
 // Setup test server
 function createTestServer() {

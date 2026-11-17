@@ -12,9 +12,12 @@ import {
     handleComment
 } from './handlers/routeHandlers.js'
 
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 const PORT = parseInt(process.env.PORT, 10) || 8000
 const HOST = '0.0.0.0'
-const __dirname = import.meta.dirname
+const __dirname = import.meta.dirname || path.dirname(fileURLToPath(import.meta.url))
 
 const server = http.createServer(async (req, res) => {
     try {
