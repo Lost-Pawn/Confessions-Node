@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: kitty-confessions
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_SSL
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: confessions-db
+          property: connectionString
+
+databases:
+  - name: confessions-db
+    plan: free
+    databaseName: confessions
+    user: confessions_user

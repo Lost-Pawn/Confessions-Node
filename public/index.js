@@ -1,6 +1,6 @@
 // SANITIZER — prevents XSS attacks
-
 function sanitize(str) {
+    if (str === null || str === undefined) return ''
     const map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -14,12 +14,14 @@ function sanitize(str) {
 }
 
 // SECTION NAVIGATION
-
 function showSection(sectionId) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active')
     })
-    document.getElementById(sectionId).classList.add('active')
+    const targetSection = document.getElementById(sectionId)
+    if (targetSection) {
+        targetSection.classList.add('active')
+    }
 
     if (sectionId === 'view') {
         loadConfessions()
@@ -30,10 +32,16 @@ function showSection(sectionId) {
         const form = document.querySelector('#confessionForm')
         const successMessage = document.querySelector('#successMessage')
 
-        form.style.display = ''
-        form.reset()
-        charCount.textContent = '0'
-        successMessage.classList.remove('show')
+        if (form) {
+            form.style.display = ''
+            form.reset()
+        }
+        if (charCount) {
+            charCount.textContent = '0'
+        }
+        if (successMessage) {
+            successMessage.classList.remove('show')
+        }
     }
 }
 
@@ -59,28 +67,30 @@ document.querySelectorAll('.secondary-btn').forEach(btn => {
 })
 
 // CHARACTER COUNTER
-
 const textarea = document.querySelector('#confessionText')
 const charCount = document.querySelector('#charCount')
 
-textarea.addEventListener('input', () => {
-    const count = textarea.value.length
-    charCount.textContent = count
+if (textarea && charCount) {
+    textarea.addEventListener('input', () => {
+        const count = textarea.value.length
+        charCount.textContent = count
 
-    if (count > 700) {
-        charCount.style.color = '#FF1493'
-        charCount.style.fontWeight = 'bold'
-    } else {
-        charCount.style.color = ''
-        charCount.style.fontWeight = ''
-    }
-})
+        if (count > 700) {
+            charCount.style.color = '#FF1493'
+            charCount.style.fontWeight = 'bold'
+        } else {
+            charCount.style.color = ''
+            charCount.style.fontWeight = ''
+        }
+    })
+}
 
 // TIME FORMATTER
-
 function timeAgo(isoString) {
+    if (!isoString) return 'Just now'
     const now = Date.now()
     const then = new Date(isoString).getTime()
+    if (isNaN(then)) return 'Just now'
     const diff = Math.floor((now - then) / 1000)
 
     if (diff < 60) return 'Just now'
@@ -89,14 +99,21 @@ function timeAgo(isoString) {
     return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) === 1 ? '' : 's'} ago`
 }
 
-// LIKES — SESSION STORAGE
-
+// LIKES — LOCAL STORAGE
 function getLikedIds() {
-    return JSON.parse(localStorage.getItem('likedConfessions') || '[]')
+    try {
+        return JSON.parse(localStorage.getItem('likedConfessions') || '[]')
+    } catch {
+        return []
+    }
 }
 
 function saveLikedIds(ids) {
-    localStorage.setItem('likedConfessions', JSON.stringify(ids))
+    try {
+        localStorage.setItem('likedConfessions', JSON.stringify(ids))
+    } catch (e) {
+        console.error('Failed to save liked IDs:', e)
+    }
 }
 
 function isLiked(id) {
@@ -116,32 +133,45 @@ function toggleLikedId(id) {
 }
 
 // TOKENS — OWNERSHIP
-
 function getTokens() {
-    return JSON.parse(localStorage.getItem('confessionTokens') || '{}')
+    try {
+        return JSON.parse(localStorage.getItem('confessionTokens') || '{}')
+    } catch {
+        return {}
+    }
 }
 
 function saveToken(id, token) {
-    const tokens = getTokens()
-    tokens[id] = token
-    localStorage.setItem('confessionTokens', JSON.stringify(tokens))
+    try {
+        const tokens = getTokens()
+        tokens[id] = token
+        localStorage.setItem('confessionTokens', JSON.stringify(tokens))
+    } catch (e) {
+        console.error('Failed to save confession token:', e)
+    }
 }
 
-// Returns token string if user owns this confession, otherwise null
 function getToken(id) {
     const tokens = getTokens()
     return tokens[id] || null
 }
 
 // LOAD & RENDER CARDS
-
 async function loadConfessions() {
     try {
-        const data = await fetch('/api')
-        const response = await data.json()
-        renderCards(response)
+        const response = await fetch('/api')
+        if (!response.ok) {
+            throw new Error(`Server returned HTTP ${response.status}`)
+        }
+        const data = await response.json()
+        if (Array.isArray(data)) {
+            renderCards(data)
+        } else {
+            renderCards([])
+        }
     } catch (err) {
-        console.log(err)
+        console.error('Failed to load confessions:', err)
+        renderCards([])
     }
 }
 
@@ -171,24 +201,27 @@ function renderCards(cardsData) {
     const container = document.querySelector('#confessionsContainer')
     const emptyState = document.querySelector('#emptyState')
 
+    if (!container) return
+
     if (!cardsData || cardsData.length === 0) {
         container.innerHTML = ''
-        emptyState.classList.add('show')
+        if (emptyState) emptyState.classList.add('show')
         return
     }
 
-    emptyState.classList.remove('show')
+    if (emptyState) emptyState.classList.remove('show')
 
     let cardsHTML = ''
 
     cardsData.forEach((card) => {
-        const badgeClass = card.vibe === 'sweet' ? 'sweet-badge' : 'edgy-badge'
-        const badgeIcon = card.vibe === 'sweet' ? '🎀 Sweet' : '💀 Edgy'
+        const vibe = card.vibe === 'edgy' ? 'edgy' : 'sweet'
+        const badgeClass = vibe === 'sweet' ? 'sweet-badge' : 'edgy-badge'
+        const badgeIcon = vibe === 'sweet' ? '🎀 Sweet' : '💀 Edgy'
         const time = card.createdAt ? timeAgo(card.createdAt) : 'Just now'
         const editedNote = card.editedAt ? ' (edited)' : ''
-        const likes = card.likes || 0
+        const likes = typeof card.likes === 'number' ? card.likes : 0
         const liked = isLiked(card.id)
-        const comments = card.comments || []
+        const comments = Array.isArray(card.comments) ? card.comments : []
 
         // Only show Edit/Delete if this user owns the confession
         const isOwner = getToken(card.id) !== null
@@ -201,7 +234,7 @@ function renderCards(cardsData) {
         ` : ''
 
         cardsHTML += `
-            <div class="confession-card ${sanitize(card.vibe)}" data-id="${sanitize(card.id)}">
+            <div class="confession-card ${sanitize(vibe)}" data-id="${sanitize(card.id)}">
                 <div class="confession-header">
                     <span class="confession-badge ${badgeClass}">${badgeIcon}</span>
                     <span class="confession-id-display">#${sanitize(card.id)}</span>
@@ -213,7 +246,6 @@ function renderCards(cardsData) {
 
                 <div class="confession-footer">
                     <span class="confession-time">${time}${editedNote}</span>
-                    <!-- ✅ Only renders for the owner -->
                     ${ownerActions}
                 </div>
 
@@ -258,43 +290,66 @@ function renderCards(cardsData) {
 }
 
 // CONFESSION FORM
-
-document
-    .querySelector('#confessionForm')
-    .addEventListener('submit', async (e) => {
-
+const confessionForm = document.querySelector('#confessionForm')
+if (confessionForm) {
+    confessionForm.addEventListener('submit', async (e) => {
         e.preventDefault()
 
-        const confession = document.querySelector('#confessionText').value
-        const vibe = document.querySelector('input[name="vibe"]:checked').value
+        const confessionInput = document.querySelector('#confessionText')
+        const vibeInput = document.querySelector('input[name="vibe"]:checked')
 
-        const response = await fetch('/api', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ confession, vibe })
-        })
+        if (!confessionInput || !vibeInput) return
 
-        const data = await response.json()
+        const confession = confessionInput.value.trim()
+        const vibe = vibeInput.value
 
-        // Save token to localStorage so user can edit/delete later
-        if (data.id && data.token) {
-            saveToken(data.id, data.token)
+        if (!confession) {
+            alert('Please enter a confession')
+            return
         }
 
-        const form = document.querySelector('#confessionForm')
-        const successMessage = document.querySelector('#successMessage')
-        const confessionIdSpan = document.querySelector('#confessionId')
+        try {
+            const response = await fetch('/api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confession, vibe })
+            })
 
-        form.style.display = 'none'
-        confessionIdSpan.textContent = sanitize(data.id)
-        successMessage.classList.add('show')
+            const data = await response.json()
 
-        form.reset()
-        charCount.textContent = '0'
+            if (!response.ok || !data.success) {
+                alert(data.error || 'Failed to submit confession')
+                return
+            }
+
+            // Save token to localStorage so user can edit/delete later
+            if (data.id && data.token) {
+                saveToken(data.id, data.token)
+            }
+
+            const successMessage = document.querySelector('#successMessage')
+            const confessionIdSpan = document.querySelector('#confessionId')
+
+            confessionForm.style.display = 'none'
+            if (confessionIdSpan) {
+                confessionIdSpan.textContent = sanitize(data.id)
+            }
+            if (successMessage) {
+                successMessage.classList.add('show')
+            }
+
+            confessionForm.reset()
+            if (charCount) {
+                charCount.textContent = '0'
+            }
+        } catch (err) {
+            console.error('Error submitting confession:', err)
+            alert('Network error submitting confession. Please try again.')
+        }
     })
+}
 
 // FILTER BUTTONS
-
 function applyFilter(filter) {
     const cards = document.querySelectorAll('.confession-card')
     cards.forEach(card => {
@@ -315,9 +370,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 })
 
 // DELEGATED CLICK HANDLER
-
 document.addEventListener('click', async (e) => {
-
     const card = e.target.closest('.confession-card')
 
     // LIKE
@@ -326,16 +379,26 @@ document.addEventListener('click', async (e) => {
         const id = btn.dataset.id
         const nowLiked = toggleLikedId(id)
 
-        const response = await fetch('/api/like', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, liked: nowLiked })
-        })
+        try {
+            const response = await fetch('/api/like', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, liked: nowLiked })
+            })
 
-        const data = await response.json()
+            const data = await response.json()
 
-        btn.classList.toggle('liked', nowLiked)
-        btn.innerHTML = `${nowLiked ? '♥' : '♡'} <span class="like-count">${sanitize(String(data.likes))}</span>`
+            if (response.ok && data.success && typeof data.likes === 'number') {
+                btn.classList.toggle('liked', nowLiked)
+                btn.innerHTML = `${nowLiked ? '♥' : '♡'} <span class="like-count">${sanitize(String(data.likes))}</span>`
+            } else {
+                toggleLikedId(id) // Revert on failure
+                alert(data.error || 'Failed to update like')
+            }
+        } catch (err) {
+            toggleLikedId(id) // Revert on network failure
+            console.error('Like error:', err)
+        }
         return
     }
 
@@ -344,7 +407,9 @@ document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.toggle-comments-btn')
         const id = btn.dataset.id
         const commentsSection = document.querySelector(`.comments-section[data-id="${id}"]`)
-        commentsSection.classList.toggle('hidden')
+        if (commentsSection) {
+            commentsSection.classList.toggle('hidden')
+        }
         return
     }
 
@@ -353,42 +418,54 @@ document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.submit-comment-btn')
         const id = btn.dataset.id
         const input = document.querySelector(`.comment-input[data-id="${id}"]`)
+        if (!input) return
         const text = input.value.trim()
 
         if (!text) return
 
-        const response = await fetch('/api/comment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ confessionId: id, text })
-        })
+        try {
+            const response = await fetch('/api/comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confessionId: id, text })
+            })
 
-        const data = await response.json()
+            const data = await response.json()
 
-        if (data.success) {
-            input.value = ''
-            const commentsList = document.querySelector(`.comments-section[data-id="${id}"] .comments-list`)
-            const noComments = commentsList.querySelector('.no-comments')
-            if (noComments) noComments.remove()
+            if (response.ok && data.success && data.comment) {
+                input.value = ''
+                const commentsList = document.querySelector(`.comments-section[data-id="${id}"] .comments-list`)
+                if (commentsList) {
+                    const noComments = commentsList.querySelector('.no-comments')
+                    if (noComments) noComments.remove()
 
-            const newCommentHTML = `
-                <div class="comment-item" data-comment-id="${sanitize(data.comment.id)}">
-                    <p class="comment-text">${sanitize(data.comment.text)}</p>
-                    <div class="comment-footer">
-                        <span class="comment-time">Just now</span>
-                        <button
-                            class="delete-comment-btn"
-                            data-confession-id="${sanitize(id)}"
-                            data-comment-id="${sanitize(data.comment.id)}"
-                        >🗑</button>
-                    </div>
-                </div>
-            `
-            commentsList.insertAdjacentHTML('beforeend', newCommentHTML)
+                    const newCommentHTML = `
+                        <div class="comment-item" data-comment-id="${sanitize(data.comment.id)}">
+                            <p class="comment-text">${sanitize(data.comment.text)}</p>
+                            <div class="comment-footer">
+                                <span class="comment-time">Just now</span>
+                                <button
+                                    class="delete-comment-btn"
+                                    data-confession-id="${sanitize(id)}"
+                                    data-comment-id="${sanitize(data.comment.id)}"
+                                >🗑</button>
+                            </div>
+                        </div>
+                    `
+                    commentsList.insertAdjacentHTML('beforeend', newCommentHTML)
 
-            const toggleBtn = document.querySelector(`.toggle-comments-btn[data-id="${id}"]`)
-            const currentCount = commentsList.querySelectorAll('.comment-item').length
-            toggleBtn.textContent = `💬 ${currentCount} Comment${currentCount === 1 ? '' : 's'}`
+                    const toggleBtn = document.querySelector(`.toggle-comments-btn[data-id="${id}"]`)
+                    if (toggleBtn) {
+                        const currentCount = commentsList.querySelectorAll('.comment-item').length
+                        toggleBtn.textContent = `💬 ${currentCount} Comment${currentCount === 1 ? '' : 's'}`
+                    }
+                }
+            } else {
+                alert(data.error || 'Failed to add comment')
+            }
+        } catch (err) {
+            console.error('Error adding comment:', err)
+            alert('Failed to post comment')
         }
         return
     }
@@ -401,27 +478,38 @@ document.addEventListener('click', async (e) => {
 
         if (!confirm('Delete this comment?')) return
 
-        const response = await fetch('/api/comment', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ confessionId, commentId })
-        })
+        try {
+            const response = await fetch('/api/comment', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confessionId, commentId })
+            })
 
-        const data = await response.json()
+            const data = await response.json()
 
-        if (data.success) {
-            const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`)
-            if (commentItem) commentItem.remove()
+            if (response.ok && data.success) {
+                const commentItem = document.querySelector(`.comment-item[data-comment-id="${commentId}"]`)
+                if (commentItem) commentItem.remove()
 
-            const commentsList = document.querySelector(`.comments-section[data-id="${confessionId}"] .comments-list`)
-            const remaining = commentsList.querySelectorAll('.comment-item').length
+                const commentsList = document.querySelector(`.comments-section[data-id="${confessionId}"] .comments-list`)
+                if (commentsList) {
+                    const remaining = commentsList.querySelectorAll('.comment-item').length
 
-            if (remaining === 0) {
-                commentsList.innerHTML = `<p class="no-comments">No comments yet. Be the first!</p>`
+                    if (remaining === 0) {
+                        commentsList.innerHTML = `<p class="no-comments">No comments yet. Be the first!</p>`
+                    }
+
+                    const toggleBtn = document.querySelector(`.toggle-comments-btn[data-id="${confessionId}"]`)
+                    if (toggleBtn) {
+                        toggleBtn.textContent = `💬 ${remaining} Comment${remaining === 1 ? '' : 's'}`
+                    }
+                }
+            } else {
+                alert(data.error || 'Failed to delete comment')
             }
-
-            const toggleBtn = document.querySelector(`.toggle-comments-btn[data-id="${confessionId}"]`)
-            toggleBtn.textContent = `💬 ${remaining} Comment${remaining === 1 ? '' : 's'}`
+        } catch (err) {
+            console.error('Error deleting comment:', err)
+            alert('Failed to delete comment')
         }
         return
     }
@@ -435,23 +523,31 @@ document.addEventListener('click', async (e) => {
         const token = getToken(id)
         if (!token) return
 
-        const newText = prompt('Edit confession:')
+        const currentTextEl = card.querySelector('.confession-content p')
+        const defaultText = currentTextEl ? currentTextEl.textContent : ''
+
+        const newText = prompt('Edit confession:', defaultText)
         if (!newText || !newText.trim()) return
 
-        const response = await fetch('/api', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, confession: newText.trim(), token })
-        })
+        try {
+            const response = await fetch('/api', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, confession: newText.trim(), token })
+            })
 
-        const data = await response.json()
+            const data = await response.json()
 
-        if (!data.success) {
-            alert(data.error || 'Failed to edit confession')
-            return
+            if (!response.ok || !data.success) {
+                alert(data.error || 'Failed to edit confession')
+                return
+            }
+
+            loadConfessions()
+        } catch (err) {
+            console.error('Error editing confession:', err)
+            alert('Failed to edit confession')
         }
-
-        loadConfessions()
     }
 
     // DELETE — sends token with request
@@ -461,19 +557,24 @@ document.addEventListener('click', async (e) => {
 
         if (!confirm('Delete this confession?')) return
 
-        const response = await fetch('/api', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, token })
-        })
+        try {
+            const response = await fetch('/api', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, token })
+            })
 
-        const data = await response.json()
+            const data = await response.json()
 
-        if (!data.success) {
-            alert(data.error || 'Failed to delete confession')
-            return
+            if (!response.ok || !data.success) {
+                alert(data.error || 'Failed to delete confession')
+                return
+            }
+
+            loadConfessions()
+        } catch (err) {
+            console.error('Error deleting confession:', err)
+            alert('Failed to delete confession')
         }
-
-        loadConfessions()
     }
 })
